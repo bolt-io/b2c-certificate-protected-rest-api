@@ -14,10 +14,11 @@ builder.Services.Configure<KestrelServerOptions>(options =>
         options.ClientCertificateMode = ClientCertificateMode.RequireCertificate);
 });
 
-
+// uncomment the two lines below to use key vault for certificate validation.
 //builder.Services.AddSingleton<ICertificateService, KeyVaultCertificateService>(sp => new(builder.Configuration["KeyVaultName"]));
 //builder.Services.AddSingleton<ICertificateValidationService, CertificateValidationService>();
 
+// comment out this line if using key vault for certificate validation.
 builder.Services.AddSingleton<ICertificateValidationService, CertificateThumbprintValidationService>();
 
 // Add services to the container.
@@ -28,6 +29,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme)
     .AddCertificate(options =>
     {
+        // change the allowed certificate types to suit your needs (chained or self-signed)
         options.AllowedCertificateTypes = CertificateTypes.All;
         options.Events = new CertificateAuthenticationEvents()
         {
@@ -81,28 +83,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("api/users/{objectId}", (Guid objectId) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    var objectIdStart = objectId.ToString()[..8];
+    var objectIdEnd = objectId.ToString()[20..];
+
+
+    UserProfile userProfile = new(objectIdStart, objectIdEnd);
+    return userProfile;
 })
-.WithName("GetWeatherForecast");
+.WithName("GetUserProfile");
 
 app.Run();
 
-internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+internal record UserProfile(string Givenname, string SurName);
+
